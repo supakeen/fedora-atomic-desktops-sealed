@@ -9,6 +9,8 @@ FROM $SYSTEMDBOOT as systemd-boot
 
 FROM $BASE as rootfs
 
+ARG TARGETARCH
+
 RUN --mount=type=tmpfs,target=/run \
     --mount=type=tmpfs,target=/tmp \
     --mount=type=tmpfs,target=/var \
@@ -31,6 +33,11 @@ dnf remove -y \
 
 # Install latest bootc release
 dnf upgrade -y --enablerepo=updates-testing --refresh bootc
+
+## Get fixed bootc build for image-builder
+dnf install -y 'dnf*-command(copr)'
+dnf copr enable -y packit/bootc-dev-bootc-2191-full fedora-44-x86_64
+dnf install -y bootc-202605092003.g8af07fe58a-1.fc44.x86_64
 
 # Uninstall bootupd (no support for systemd-boot yet)
 rpm -e bootupd
@@ -99,6 +106,38 @@ kargs = [
   "systemd.mask=systemd-pcrproduct.service",
 ]
 EOF
+
+# Set up image-builder meta information for the base partition table that
+# should be created
+mkdir -p /usr/lib/image-builder/bootc
+
+cat > "/usr/lib/image-builder/bootc/disk.yaml" << 'EOF'
+partition_table:
+  type: "gpt"
+  partitions:
+    - size: "2 GiB"
+      type: "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
+      payload_type: "filesystem"
+      payload:
+        type: vfat
+        mountpoint: "/boot/efi"
+        label: "EFI-SYSTEM"
+    - size: "10 GiB"
+      payload_type: "filesystem"
+      payload:
+        label: "root"
+        mountpoint: "/"
+EOF
+
+if [ "${TARGETARCH}" == "amd64" ]; then
+cat >> "/usr/lib/image-builder/bootc/disk.yaml" << 'EOF'
+      type: "4f68bce3-e8cd-4db1-96e7-fbcaf984b709"
+EOF
+elif [ "${TARGETARCH}" == "arm64" ]; then
+cat >> "/usr/lib/image-builder/bootc/disk.yaml" << 'EOF'
+      type: "b921b045-1df0-41c3-af44-4c6f280d3fae"
+EOF
+fi
 ###############################################################################
 EORUN
 
