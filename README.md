@@ -90,7 +90,7 @@ podman run --rm --privileged --pid=host --ipc=host \
   -v /:/run/host \
   quay.io/fedora-atomic-desktops-sealed/kinoite-intel:44 \
   bootc install to-filesystem \
-    --source-imgref=registry:quay.io/fedora-atomic-desktops-sealed/kinoite-intel:44 \
+    --source-imgref=containers-storage:quay.io/fedora-atomic-desktops-sealed/kinoite-intel:44 \
     --bootloader=systemd --composefs-backend --skip-finalize \
     /run/host/mnt/
 ```
